@@ -1,13 +1,13 @@
-// Configuration
+
 const API_URL = '../api/actualites.php';
 const CAT_API_URL = '../api/categories.php';
 const GAL_API_URL = '../api/galerie.php';
 let editingArticleId = null;
+let csrfToken = null;
 
-// Vérifier l'authentification
-checkAuth();
+// L'authentification est gérée côté serveur via PHP session
+// Pas besoin de checkAuth() côté client - index.php fait la vérification
 
-// Initialisation
 document.addEventListener('DOMContentLoaded', () => {
     setupNavigation();
     loadArticles();
@@ -18,17 +18,23 @@ document.addEventListener('DOMContentLoaded', () => {
     setupGalleryForm();
     setupLogout();
     setTodayDate();
+    getCSRFToken();
 });
 
-// Vérifier si l'utilisateur est connecté
-function checkAuth() {
-    const isLoggedIn = sessionStorage.getItem('admin_logged_in');
-    if (!isLoggedIn) {
-        window.location.href = 'login.php';
+// Récupérer le token CSRF du serveur
+async function getCSRFToken() {
+    try {
+        const response = await fetch('../api/csrf.php');
+        const data = await response.json();
+        if (data.success) {
+            csrfToken = data.csrf_token;
+        }
+    } catch (error) {
+        console.error('Erreur récupération CSRF token:', error);
     }
 }
 
-// Configuration de la navigation
+
 function setupNavigation() {
     const navItems = document.querySelectorAll('.nav-item[data-section]');
     
@@ -44,7 +50,7 @@ function setupNavigation() {
     });
 }
 
-// Afficher une section
+
 function showSection(sectionName) {
     const sections = document.querySelectorAll('.content-section');
     sections.forEach(s => s.classList.remove('active'));
@@ -53,7 +59,7 @@ function showSection(sectionName) {
     if (section) {
         section.classList.add('active');
         
-        // Mettre à jour le titre
+        
         const titles = {
             'articles': 'Gestion des Actualités',
             'categories': 'Gestion des Catégories',
@@ -62,7 +68,7 @@ function showSection(sectionName) {
         };
         document.getElementById('pageTitle').textContent = titles[sectionName] || 'Administration';
         
-        // Réinitialiser le formulaire si on va sur nouvelle actualité
+        
         if (sectionName === 'new-article' && !editingArticleId) {
             document.getElementById('articleForm').reset();
             document.getElementById('imagePreview').innerHTML = '';
@@ -71,9 +77,9 @@ function showSection(sectionName) {
     }
 }
 
-// --- GESTION DES ARTICLES ---
 
-// Charger la liste des articles
+
+
 async function loadArticles() {
     const tbody = document.getElementById('articlesTableBody');
     tbody.innerHTML = '<tr><td colspan="7" class="loading-cell"><div class="spinner"></div> Chargement...</td></tr>';
@@ -84,7 +90,6 @@ async function loadArticles() {
 
         if (data.success && data.articles.length > 0) {
             tbody.innerHTML = data.articles.map(article => {
-                // Gestion de l'affichage de l'image (URL ou chemin local)
                 let imgSrc = article.image;
                 if (!imgSrc.startsWith('http')) {
                     imgSrc = '../' + imgSrc;
@@ -93,7 +98,7 @@ async function loadArticles() {
                 return `
                 <tr>
                     <td>${article.id}</td>
-                    <td><img src="${imgSrc}" alt="${article.titre}" class="table-image" referrerpolicy="no-referrer" onerror="this.src='https://via.placeholder.com/50?text=Err'"></td>
+                    <td><img src="${imgSrc}" alt="${article.titre}" class="table-image" referrerpolicy="no-referrer" onerror="if(!this.hasAttribute('data-error')){this.setAttribute('data-error','1');this.src='https://via.placeholder.com/50?text=Err'}else{this.style.display='none'}"></td>
                     <td><strong>${article.titre}</strong></td>
                     <td>${article.auteur}</td>
                     <td>${formatDate(article.date)}</td>
@@ -125,13 +130,12 @@ async function loadArticles() {
     }
 }
 
-// Configurer le formulaire Article
+
 function setupForm() {
     const form = document.getElementById('articleForm');
     const imageInput = document.getElementById('image');
     const imageUrlInput = document.getElementById('image_url');
 
-    // Prévisualisation de l'image (Fichier)
     imageInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -142,22 +146,21 @@ function setupForm() {
                 `;
             };
             reader.readAsDataURL(file);
-            imageUrlInput.value = ''; // Clear URL if file selected
+            imageUrlInput.value = ''; 
         }
     });
 
-    // Prévisualisation de l'image (URL)
+
     imageUrlInput.addEventListener('input', (e) => {
         const url = e.target.value;
         if (url) {
             document.getElementById('imagePreview').innerHTML = `
-                <img src="${url}" alt="Preview" onerror="this.style.display='none'">
+                <img src="${url}" alt="Preview" onerror="if(!this.hasAttribute('data-error')){this.setAttribute('data-error','1')}else{this.style.display='none'}">
             `;
-            imageInput.value = ''; // Clear file if URL entered
+            imageInput.value = ''; 
         }
     });
 
-    // Soumission du formulaire
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -169,11 +172,17 @@ function setupForm() {
         } else {
             formData.append('action', 'create');
         }
+        
+        // Ajouter le token CSRF
+        if (csrfToken) {
+            formData.append('csrf_token', csrfToken);
+        }
 
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'same-origin'
             });
 
             const data = await response.json();
@@ -196,7 +205,7 @@ function setupForm() {
     });
 }
 
-// Modifier un article
+
 async function editArticle(id) {
     editingArticleId = id;
     showSection('new-article');
@@ -231,19 +240,30 @@ async function editArticle(id) {
     }
 }
 
-// Supprimer un article
+
 async function deleteArticle(id) {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette actualité ?')) {
         return;
     }
 
     try {
+        const body = { 
+            action: 'delete', 
+            id: id 
+        };
+        
+        // Ajouter le token CSRF
+        if (csrfToken) {
+            body.csrf_token = csrfToken;
+        }
+        
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ action: 'delete', id })
+            body: JSON.stringify(body),
+            credentials: 'same-origin'
         });
 
         const data = await response.json();
@@ -260,7 +280,6 @@ async function deleteArticle(id) {
     }
 }
 
-// --- GESTION DES CATÉGORIES ---
 
 async function loadCategories() {
     const tbody = document.getElementById('categoriesTableBody');
@@ -287,7 +306,6 @@ async function loadCategories() {
                 </tr>
             `).join('');
 
-            // Remplir le select
             const currentVal = select.value;
             select.innerHTML = '<option value="">-- Choisir --</option>' + 
                 data.categories.map(cat => `<option value="${cat.nom}">${cat.nom}</option>`).join('');
@@ -305,9 +323,18 @@ function setupCategoryForm() {
         const formData = new FormData();
         formData.append('action', 'create');
         formData.append('nom', nom);
+        
+        // Ajouter le token CSRF
+        if (csrfToken) {
+            formData.append('csrf_token', csrfToken);
+        }
 
         try {
-            const response = await fetch(CAT_API_URL, { method: 'POST', body: formData });
+            const response = await fetch(CAT_API_URL, { 
+                method: 'POST', 
+                body: formData,
+                credentials: 'same-origin'
+            });
             const data = await response.json();
             if (data.success) {
                 showToast('Catégorie ajoutée');
@@ -325,10 +352,21 @@ function setupCategoryForm() {
 async function deleteCategory(id) {
     if (!confirm('Supprimer cette catégorie ?')) return;
     try {
+        const body = { 
+            action: 'delete', 
+            id: id 
+        };
+        
+        // Ajouter le token CSRF
+        if (csrfToken) {
+            body.csrf_token = csrfToken;
+        }
+        
         const response = await fetch(CAT_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'delete', id })
+            body: JSON.stringify(body),
+            credentials: 'same-origin'
         });
         const data = await response.json();
         if (data.success) {
@@ -342,7 +380,6 @@ async function deleteCategory(id) {
     }
 }
 
-// --- GESTION DE LA GALERIE ---
 
 async function loadGallery() {
     const grid = document.getElementById('galleryGrid');
@@ -360,7 +397,7 @@ async function loadGallery() {
 
                 return `
                 <div class="gallery-item-card">
-                    <img src="${imgSrc}" alt="${img.titre}" referrerpolicy="no-referrer" onerror="this.src='https://via.placeholder.com/300x200?text=Image+non+trouvée'">
+                    <img src="${imgSrc}" alt="${img.titre}" referrerpolicy="no-referrer" onerror="if(!this.hasAttribute('data-error')){this.setAttribute('data-error','1');this.src='https://via.placeholder.com/300x200?text=Image+non+trouvée'}else{this.style.display='none'}">
                     <div class="gallery-info">
                         <h4>${img.titre}</h4>
                         <p>${img.description || ''}</p>
@@ -380,23 +417,67 @@ async function loadGallery() {
 }
 
 function setupGalleryForm() {
-    document.getElementById('galerieForm').addEventListener('submit', async (e) => {
+    const galerieForm = document.getElementById('galerieForm');
+    const galImageInput = document.getElementById('gal_image');
+    const galImageUrlInput = document.getElementById('gal_image_url');
+    
+    // Prévisualisation de l'image de la galerie
+    galImageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            galImageUrlInput.value = ''; // Vider l'URL si un fichier est choisi
+        }
+    });
+
+    galImageUrlInput.addEventListener('input', (e) => {
+        if (e.target.value) {
+            galImageInput.value = ''; // Vider le fichier si une URL est saisie
+        }
+    });
+    
+    galerieForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(document.getElementById('galerieForm'));
+        
+        const titre = document.getElementById('gal_titre').value.trim();
+        const imageFile = galImageInput.files[0];
+        const imageUrl = galImageUrlInput.value.trim();
+        
+        // Validation
+        if (!titre) {
+            showToast('Le titre est requis', 'error');
+            return;
+        }
+        
+        if (!imageFile && !imageUrl) {
+            showToast('Veuillez fournir une image (fichier ou URL)', 'error');
+            return;
+        }
+        
+        const formData = new FormData(galerieForm);
         formData.append('action', 'create');
+        
+        // Ajouter le token CSRF
+        if (csrfToken) {
+            formData.append('csrf_token', csrfToken);
+        }
 
         try {
-            const response = await fetch(GAL_API_URL, { method: 'POST', body: formData });
+            const response = await fetch(GAL_API_URL, { 
+                method: 'POST', 
+                body: formData,
+                credentials: 'same-origin'
+            });
             const data = await response.json();
             if (data.success) {
-                showToast('Image ajoutée à la galerie');
-                document.getElementById('galerieForm').reset();
+                showToast('Image ajoutée à la galerie', 'success');
+                galerieForm.reset();
                 loadGallery();
             } else {
-                showToast(data.message || 'Erreur', 'error');
+                showToast(data.message || 'Erreur lors de l\'ajout', 'error');
             }
         } catch (error) {
-            showToast('Erreur connexion', 'error');
+            console.error('Erreur:', error);
+            showToast('Erreur de connexion', 'error');
         }
     });
 }
@@ -404,10 +485,21 @@ function setupGalleryForm() {
 async function deleteGalleryItem(id) {
     if (!confirm('Supprimer cette image ?')) return;
     try {
+        const body = { 
+            action: 'delete', 
+            id: id 
+        };
+        
+        // Ajouter le token CSRF
+        if (csrfToken) {
+            body.csrf_token = csrfToken;
+        }
+        
         const response = await fetch(GAL_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'delete', id })
+            body: JSON.stringify(body),
+            credentials: 'same-origin'
         });
         const data = await response.json();
         if (data.success) {
@@ -421,23 +513,32 @@ async function deleteGalleryItem(id) {
     }
 }
 
-// Déconnexion
+
 function setupLogout() {
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-        if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
-            sessionStorage.removeItem('admin_logged_in');
-            window.location.href = 'login.php';
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        if (!confirm('Voulez-vous vraiment vous déconnecter ?')) return;
+
+        try {
+            await fetch('../api/logout.php', { 
+                method: 'POST', 
+                credentials: 'same-origin'
+            });
+        } catch (err) {
+            console.error('Erreur lors de la déconnexion serveur', err);
         }
+
+        // Redirection vers la page de login
+        window.location.href = 'login.php';
     });
 }
 
-// Définir la date d'aujourd'hui par défaut
+
 function setTodayDate() {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('date').value = today;
 }
 
-// Afficher un toast
+
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     toast.textContent = message;
@@ -448,18 +549,12 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// Fonctions utilitaires
 function formatDate(dateString) {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('fr-FR', options);
 }
 
 function getCategoryLabel(category) {
-    const labels = {
-        'evenement': 'Événement',
-        'projet': 'Projet',
-        'reussite': 'Réussite',
-        'autre': 'Autre'
-    };
-    return labels[category] || category;
+    // Les catégories viennent directement de la base de données
+    return category || 'Sans catégorie';
 }

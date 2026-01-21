@@ -6,10 +6,38 @@ const articlesPerPage = 6;
 
 // Charger les actualités au chargement de la page
 document.addEventListener('DOMContentLoaded', () => {
+    loadCategories();
     loadActualites();
     setupFilters();
     setupModal();
 });
+
+// Charger les catégories pour les filtres
+async function loadCategories() {
+    try {
+        const response = await fetch('api/categories.php?action=getAll');
+        const data = await response.json();
+        
+        if (data.success && data.categories.length > 0) {
+            const filtersContainer = document.getElementById('categoryFilters');
+            const buttonToutes = filtersContainer.querySelector('[data-filter="all"]');
+            
+            // Ajouter les boutons de catégories dynamiquement
+            data.categories.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = 'filter-btn';
+                btn.setAttribute('data-filter', cat.nom);
+                btn.textContent = cat.nom;
+                filtersContainer.appendChild(btn);
+            });
+            
+            // Reconfigurer les événements de filtres après ajout
+            setupFilters();
+        }
+    } catch (error) {
+        console.error('Erreur chargement catégories:', error);
+    }
+}
 
 // Charger les actualités depuis la base de données
 async function loadActualites(page = 1, filter = 'all') {
@@ -253,13 +281,8 @@ function truncateText(text, maxLength) {
 }
 
 function getCategoryLabel(category) {
-    const labels = {
-        'evenement': 'Événement',
-        'projet': 'Projet',
-        'reussite': 'Réussite',
-        'autre': 'Autre'
-    };
-    return labels[category] || category;
+    // Les catégories viennent directement de la base de données
+    return category || 'Sans catégorie';
 }
 
 function showError(message) {

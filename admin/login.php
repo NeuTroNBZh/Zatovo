@@ -4,22 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion Admin - Zatovo</title>
-    <link rel="stylesheet" href="../styles.css">
-    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="../assets/css/styles.css">
+    <link rel="stylesheet" href="assets/admin.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
-    <!-- Favicon & Icons -->
-    <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
-    <link rel="alternate icon" type="image/x-icon" href="../images/favicon.ico">
-    <link rel="apple-touch-icon" href="../images/apple-touch-icon.png">
-    <link rel="manifest" href="../images/site.webmanifest">
-    <meta name="theme-color" content="#ffffff">
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
 </head>
 <body class="admin-body">
     <div class="login-container">
         <div class="login-box">
             <div class="login-header">
-                <img src="../images/LOGO_Zatovo.png" alt="Association Zatovo - Administration" class="login-logo" loading="lazy">
+                <img src="../images/LOGO_Zatovo.png" alt="Zatovo" class="admin-logo">
+                <p>Administration</p>
             </div>
             <form id="loginForm" class="login-form">
                 <div class="form-group">
@@ -62,12 +59,18 @@
                 try {
                     const data = JSON.parse(text);
                     if (data.success) {
-                        sessionStorage.setItem('admin_logged_in', 'true');
-                        sessionStorage.setItem('admin_username', data.username);
-                        window.location.href = 'Backoffice.php';
+                        // Ne plus utiliser sessionStorage - la session serveur gère tout
+                        window.location.href = 'index.php';
                     } else {
                         errorDiv.textContent = data.message || 'Identifiants incorrects';
                         errorDiv.style.display = 'block';
+                        
+                        // Si compte bloqué, désactiver le formulaire temporairement
+                        if (data.locked) {
+                            document.getElementById('username').disabled = true;
+                            document.getElementById('password').disabled = true;
+                            document.querySelector('.btn-login').disabled = true;
+                        }
                     }
                 } catch (e) {
                     console.error('Erreur parsing JSON:', e);

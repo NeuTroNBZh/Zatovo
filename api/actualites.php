@@ -1,12 +1,15 @@
 <?php
 // api/actualites.php
+session_start();
+
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
-header('Access-Control-Allow-Headers: Content-Type');
 
 // Connexion à la base de données MySQL via PDO
 require_once '../config/db.php';
+require_once 'security.php';
+
+// Ajouter les headers de sécurité
+setSecurityHeaders();
 
 // Récupérer l'action
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
@@ -15,6 +18,20 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 if (empty($action)) {
     $input = json_decode(file_get_contents('php://input'), true);
     $action = $input['action'] ?? 'getAll';
+}
+
+// Les actions de modification nécessitent une authentification
+$protected_actions = ['create', 'update', 'delete'];
+if (in_array($action, $protected_actions)) {
+    requireAuth();
+    
+    // Vérifier le token CSRF pour les actions de modification
+    $csrf_token = $_POST['csrf_token'] ?? $input['csrf_token'] ?? '';
+    if (!validateCSRF($csrf_token)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Token CSRF invalide']);
+        exit;
+    }
 }
 
 switch ($action) {
@@ -112,13 +129,14 @@ function getOneArticle() {
 function createArticle() {
     global $pdo;
     
-    $titre = $_POST['titre'] ?? '';
-    $auteur = $_POST['auteur'] ?? '';
-    $date = $_POST['date'] ?? '';
-    $texte = $_POST['texte'] ?? '';
-    $lien = $_POST['lien'] ?? '';
-    $categorie = $_POST['categorie'] ?? '';
-    $imageUrl = $_POST['image_url'] ?? '';
+    // Nettoyer les entrées
+    $titre = sanitizeInput($_POST['titre'] ?? '');
+    $auteur = sanitizeInput($_POST['auteur'] ?? '');
+    $date = sanitizeInput($_POST['date'] ?? '');
+    $texte = trim($_POST['texte'] ?? ''); // Ne pas htmlspecialchars le texte pour garder les sauts de ligne
+    $lien = sanitizeInput($_POST['lien'] ?? '');
+    $categorie = sanitizeInput($_POST['categorie'] ?? '');
+    $imageUrl = trim($_POST['image_url'] ?? '');
     
     // Validation
     if (empty($titre) || empty($auteur) || empty($date) || empty($texte) || empty($categorie)) {
@@ -126,10 +144,35 @@ function createArticle() {
         return;
     }
     
+    // Valider la date
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        echo json_encode(['success' => false, 'message' => 'Format de date invalide']);
+        return;
+    }
+    
+    // Valider le lien si fourni
+    if (!empty($lien) && !isValidUrl($lien)) {
+        echo json_encode(['success' => false, 'message' => 'URL du lien invalide']);
+        return;
+    }
+    
+    // Valider l'URL de l'image si fournie
+    if (!empty($imageUrl) && !isValidUrl($imageUrl)) {
+        echo json_encode(['success' => false, 'message' => 'URL de l\'image invalide']);
+        return;
+    }
+    
     // Gestion de l'image (Upload ou URL)
     $imagePath = $imageUrl; // Par défaut, on prend l'URL si fournie
     
     if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+        // Valider le fichier uploadé
+        $validation = validateUploadedFile($_FILES['image']);
+        if (!$validation['valid']) {
+            echo json_encode(['success' => false, 'message' => $validation['error']]);
+            return;
+        }
+        
         $uploadedPath = uploadImage($_FILES['image']);
         if ($uploadedPath) {
             $imagePath = $uploadedPath;
@@ -169,18 +212,37 @@ function createArticle() {
 function updateArticle() {
     global $pdo;
     
-    $id = $_POST['id'] ?? 0;
-    $titre = $_POST['titre'] ?? '';
-    $auteur = $_POST['auteur'] ?? '';
-    $date = $_POST['date'] ?? '';
-    $texte = $_POST['texte'] ?? '';
-    $lien = $_POST['lien'] ?? '';
-    $categorie = $_POST['categorie'] ?? '';
-    $imageUrl = $_POST['image_url'] ?? '';
+    // Nettoyer les entrées
+    $id = (int)($_POST['id'] ?? 0);
+    $titre = sanitizeInput($_POST['titre'] ?? '');
+    $auteur = sanitizeInput($_POST['auteur'] ?? '');
+    $date = sanitizeInput($_POST['date'] ?? '');
+    $texte = trim($_POST['texte'] ?? '');
+    $lien = sanitizeInput($_POST['lien'] ?? '');
+    $categorie = sanitizeInput($_POST['categorie'] ?? '');
+    $imageUrl = trim($_POST['image_url'] ?? '');
     
     // Validation
     if (empty($id) || empty($titre) || empty($auteur) || empty($date) || empty($texte) || empty($categorie)) {
         echo json_encode(['success' => false, 'message' => 'Tous les champs obligatoires doivent être remplis']);
+        return;
+    }
+    
+    // Valider la date
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        echo json_encode(['success' => false, 'message' => 'Format de date invalide']);
+        return;
+    }
+    
+    // Valider le lien si fourni
+    if (!empty($lien) && !isValidUrl($lien)) {
+        echo json_encode(['success' => false, 'message' => 'URL du lien invalide']);
+        return;
+    }
+    
+    // Valider l'URL de l'image si fournie
+    if (!empty($imageUrl) && !isValidUrl($imageUrl)) {
+        echo json_encode(['success' => false, 'message' => 'URL de l\'image invalide']);
         return;
     }
     

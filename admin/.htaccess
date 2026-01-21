@@ -1,0 +1,41 @@
+# Sécurité du répertoire admin
+<Files "*.php">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+# Désactiver l'affichage des erreurs PHP (pour la production)
+php_flag display_errors Off
+php_flag display_startup_errors Off
+
+# Augmenter la sécurité des sessions
+php_value session.cookie_httponly 1
+php_value session.cookie_secure 0
+php_value session.use_only_cookies 1
+php_value session.cookie_samesite Strict
+
+# Limiter la taille des uploads
+php_value upload_max_filesize 5M
+php_value post_max_size 6M
+
+# Désactiver l'exécution de PHP dans certains répertoires
+<FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|pdf)$">
+    php_flag engine off
+</FilesMatch>
+
+# Protection contre les injections
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Désactiver l'indexation des répertoires
+Options -Indexes
+
+# Protection des fichiers sensibles
+<FilesMatch "^(\.env|\.git|\.htaccess|\.htpasswd)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

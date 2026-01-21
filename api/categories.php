@@ -1,13 +1,30 @@
 <?php
+session_start();
+
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, DELETE');
 require_once '../config/db.php';
+require_once 'security.php';
+
+setSecurityHeaders();
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 if (empty($action)) {
     $input = json_decode(file_get_contents('php://input'), true);
     $action = $input['action'] ?? 'getAll';
+}
+
+// Les actions de modification nécessitent une authentification
+$protected_actions = ['create', 'delete'];
+if (in_array($action, $protected_actions)) {
+    requireAuth();
+    
+    // Vérifier le token CSRF
+    $csrf_token = $_POST['csrf_token'] ?? $input['csrf_token'] ?? '';
+    if (!validateCSRF($csrf_token)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Token CSRF invalide']);
+        exit;
+    }
 }
 
 switch ($action) {
@@ -21,9 +38,17 @@ switch ($action) {
         break;
         
     case 'create':
-        $nom = $_POST['nom'] ?? '';
+        $nom = sanitizeInput($_POST['nom'] ?? '');
         if ($nom) {
+            // Vérifier que la catégorie n'existe pas déjà
             try {
+                $check = $pdo->prepare("SELECT id FROM categories WHERE nom = ?");
+                $check->execute([$nom]);
+                if ($check->fetch()) {
+                    echo json_encode(['success' => false, 'message' => 'Cette catégorie existe déjà']);
+                    exit;
+                }
+                
                 $stmt = $pdo->prepare("INSERT INTO categories (nom) VALUES (?)");
                 if ($stmt->execute([$nom])) {
                     echo json_encode(['success' => true, 'id' => $pdo->lastInsertId(), 'nom' => $nom]);
@@ -40,7 +65,7 @@ switch ($action) {
         
     case 'delete':
         $data = json_decode(file_get_contents('php://input'), true);
-        $id = $data['id'] ?? 0;
+        $id = (int)($data['id'] ?? 0);
         if ($id) {
             try {
                 $stmt = $pdo->prepare("DELETE FROM categories WHERE id = ?");

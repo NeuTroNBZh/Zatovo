@@ -1,13 +1,30 @@
 <?php
+session_start();
+
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, DELETE');
 require_once '../config/db.php';
+require_once 'security.php';
+
+setSecurityHeaders();
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 if (empty($action)) {
     $input = json_decode(file_get_contents('php://input'), true);
     $action = $input['action'] ?? 'getAll';
+}
+
+// Les actions de modification nécessitent une authentification
+$protected_actions = ['create', 'delete'];
+if (in_array($action, $protected_actions)) {
+    requireAuth();
+    
+    // Vérifier le token CSRF
+    $csrf_token = $_POST['csrf_token'] ?? $input['csrf_token'] ?? '';
+    if (!validateCSRF($csrf_token)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Token CSRF invalide']);
+        exit;
+    }
 }
 
 switch ($action) {
@@ -21,38 +38,71 @@ switch ($action) {
         break;
         
     case 'create':
-        $titre = $_POST['titre'] ?? '';
-        $description = $_POST['description'] ?? '';
-        $imageUrl = $_POST['image_url'] ?? '';
+        $titre = sanitizeInput($_POST['titre'] ?? '');
+        $description = sanitizeInput($_POST['description'] ?? '');
+        $imageUrl = trim($_POST['image_url'] ?? '');
         
-        $imagePath = $imageUrl;
+        // Validation du titre
+        if (empty($titre)) {
+            echo json_encode(['success' => false, 'message' => 'Le titre est requis']);
+            exit;
+        }
+        
+        // Valider l'URL si fournie
+        if (!empty($imageUrl) && !isValidUrl($imageUrl)) {
+            echo json_encode(['success' => false, 'message' => 'URL de l\'image invalide']);
+            exit;
+        }
+        
+        $imagePath = '';
+        
+        // Priorité 1: Upload de fichier
         if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = '../uploads/';
-            if (!file_exists($uploadDir)) mkdir($uploadDir, 0777, true);
+            // Valider le fichier
+            $validation = validateUploadedFile($_FILES['image']);
+            if (!$validation['valid']) {
+                echo json_encode(['success' => false, 'message' => $validation['error']]);
+                exit;
+            }
             
-            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-            if (in_array($_FILES['image']['type'], $allowedTypes)) {
-                $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-                $filename = uniqid('galerie_', true) . '.' . $ext;
-                if (move_uploaded_file($_FILES['image']['tmp_name'], $uploadDir . $filename)) {
-                    $imagePath = 'uploads/' . $filename;
-                }
+            $uploadDir = '../uploads/';
+            if (!file_exists($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            
+            $filename = generateSecureFilename($_FILES['image']['name']);
+            
+            if (move_uploaded_file($_FILES['image']['tmp_name'], $uploadDir . $filename)) {
+                $imagePath = 'uploads/' . $filename;
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Erreur lors du téléchargement du fichier']);
+                exit;
             }
         }
+        // Priorité 2: URL fournie
+        elseif (!empty($imageUrl)) {
+            $imagePath = $imageUrl;
+        }
+        // Aucune image fournie
+        else {
+            echo json_encode(['success' => false, 'message' => 'Veuillez fournir une image (fichier ou URL)']);
+            exit;
+        }
 
-        if ($titre && $imagePath) {
-            try {
-                $stmt = $pdo->prepare("INSERT INTO galerie (titre, description, image) VALUES (?, ?, ?)");
-                if ($stmt->execute([$titre, $description, $imagePath])) {
-                    echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
-                } else {
-                    echo json_encode(['success' => false, 'message' => 'Erreur lors de la création de l\'image dans la galerie']);
-                }
-            } catch (PDOException $e) {
-                echo json_encode(['success' => false, 'message' => 'Erreur SQL: ' . $e->getMessage()]);
+        // Insertion dans la base de données
+        try {
+            $stmt = $pdo->prepare("INSERT INTO galerie (titre, description, image) VALUES (?, ?, ?)");
+            if ($stmt->execute([$titre, $description, $imagePath])) {
+                echo json_encode([
+                    'success' => true, 
+                    'message' => 'Image ajoutée avec succès',
+                    'id' => $pdo->lastInsertId()
+                ]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Erreur lors de l\'insertion dans la base de données']);
             }
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Titre et image (ou URL) requis']);
+        } catch (PDOException $e) {
+            echo json_encode(['success' => false, 'message' => 'Erreur SQL: ' . $e->getMessage()]);
         }
         break;
         

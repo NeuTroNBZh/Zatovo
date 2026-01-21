@@ -1,0 +1,41 @@
+# Fichiers de configuration sensibles
+.env
+config/db.php
+
+# Fichiers uploadés par les utilisateurs
+uploads/*
+!uploads/.htaccess
+tmp_uploads/*
+
+# Fichiers système et IDE
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+error_log
+debug.log
+
+# Fichiers temporaires
+*.tmp
+*.bak
+*.cache
+
+# Node modules (si utilisé)
+node_modules/
+
+# Composer (si utilisé)
+vendor/
+
+# Fichiers de base de données
+*.sql
+*.sqlite
+*.db
+
+# Fichiers de sauvegarde
+backup/
+*.backup

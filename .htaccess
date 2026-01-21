@@ -1,0 +1,49 @@
+# Sécurité globale du site
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Désactiver l'indexation des répertoires
+Options -Indexes
+
+# Protection des fichiers de configuration
+<FilesMatch "^(\.env|\.git|\.htaccess|\.htpasswd|config\.php|db\.php)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Interdire l'accès direct aux fichiers PHP sensibles
+<FilesMatch "^(security\.php)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Limiter la taille des uploads
+php_value upload_max_filesize 5M
+php_value post_max_size 6M
+
+# Sécurité des sessions
+php_value session.cookie_httponly 1
+php_value session.use_only_cookies 1
+php_value session.cookie_samesite Lax
+
+# Désactiver l'exécution de PHP dans le répertoire uploads
+<Directory "uploads">
+    php_flag engine off
+    Options -Indexes
+    <FilesMatch "\.(php|phtml|php3|php4|php5|phps)$">
+        Order Deny,Allow
+        Deny from all
+    </FilesMatch>
+</Directory>
+
+# Protection contre les hotlinks d'images (optionnel)
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{HTTP_REFERER} !^$
+#     RewriteCond %{HTTP_REFERER} !^https?://(www\.)?votre-domaine\.com [NC]
+#     RewriteRule \.(jpg|jpeg|png|gif|webp)$ - [F,NC]
+# </IfModule>

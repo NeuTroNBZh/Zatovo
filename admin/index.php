@@ -1,26 +1,30 @@
+<?php
+session_start();
+
+if (!isset($_SESSION['admin_auth']) || $_SESSION['admin_auth'] !== true) {
+    header('Location: ../index.php');
+    exit();
+}
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Back Office - Zatovo</title>
-    <link rel="stylesheet" href="../styles.css">
-    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="../assets/css/styles.css">
+    <link rel="stylesheet" href="assets/admin.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
-    <!-- Favicon & Icons -->
-    <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
-    <link rel="alternate icon" type="image/x-icon" href="../images/favicon.ico">
-    <link rel="apple-touch-icon" href="../images/apple-touch-icon.png">
-    <link rel="manifest" href="../images/site.webmanifest">
-    <meta name="theme-color" content="#ffffff">
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
 </head>
 <body class="admin-body">
     <div class="admin-container">
-        <!-- Sidebar -->
         <aside class="admin-sidebar">
             <div class="sidebar-header">
-                <img src="../images/LOGO_Zatovo.png" alt="Association Zatovo - Back Office" class="sidebar-logo" loading="lazy">
+                <img src="../images/LOGO_Zatovo.png" alt="Zatovo" class="admin-logo">
+                <p>Back Office</p>
             </div>
             <nav class="sidebar-nav">
                 <a href="#" class="nav-item active" data-section="articles">
@@ -92,7 +96,6 @@
                 </div>
             </header>
 
-            <!-- Content Sections -->
             <div class="admin-content">
                 <!-- Section: Liste des articles -->
                 <section id="articles-section" class="content-section active">
@@ -130,7 +133,6 @@
                     </div>
                 </section>
 
-                <!-- Section: Catégories -->
                 <section id="categories-section" class="content-section">
                     <h2>Gestion des Catégories</h2>
                     <div class="form-container" style="margin-bottom: 20px;">
@@ -158,35 +160,45 @@
                     </div>
                 </section>
 
-                <!-- Section: Galerie -->
                 <section id="galerie-section" class="content-section">
                     <h2>Gestion de la Galerie</h2>
                     <div class="form-container" style="margin-bottom: 20px;">
                         <form id="galerieForm" enctype="multipart/form-data">
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="gal_titre">Titre</label>
-                                    <input type="text" id="gal_titre" name="titre" required>
+                                    <label for="gal_titre">Titre *</label>
+                                    <input type="text" id="gal_titre" name="titre" required placeholder="Titre de l'image">
                                 </div>
                                 <div class="form-group">
                                     <label for="gal_desc">Description</label>
-                                    <input type="text" id="gal_desc" name="description">
+                                    <input type="text" id="gal_desc" name="description" placeholder="Description de l'image (optionnel)">
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="gal_image">Image (Fichier ou URL)</label>
-                                <input type="file" id="gal_image" name="image" accept="image/*">
-                                <input type="text" id="gal_image_url" name="image_url" placeholder="Ou URL de l'image" style="margin-top: 5px;">
+                                <label for="gal_image">Image (fichier)</label>
+                                <input type="file" id="gal_image" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
+                                <small>Formats acceptés: JPG, PNG, GIF, WebP</small>
                             </div>
-                            <button type="submit" class="btn btn-primary">Ajouter à la galerie</button>
+                            <div style="text-align: center; margin: 10px 0; color: #666;">OU</div>
+                            <div class="form-group">
+                                <label for="gal_image_url">URL de l'image</label>
+                                <input type="text" id="gal_image_url" name="image_url" placeholder="https://exemple.com/image.jpg">
+                                <small>Fournissez une URL si vous ne téléchargez pas de fichier</small>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 5px;">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Ajouter à la galerie
+                            </button>
                         </form>
                     </div>
                     <div class="gallery-grid" id="galleryGrid">
-                        <!-- Rempli par JS -->
+                        <div style="text-align: center; padding: 40px; color: #999;">Chargement...</div>
                     </div>
                 </section>
 
-                <!-- Section: Nouveau/Modifier article -->
                 <section id="new-article-section" class="content-section">
                     <div class="form-container">
                         <form id="articleForm" class="article-form" enctype="multipart/form-data">
@@ -215,10 +227,7 @@
                                     <label for="categorie">Catégorie *</label>
                                     <select id="categorie" name="categorie" required>
                                         <option value="">-- Choisir --</option>
-                                        <option value="evenement">Événement</option>
-                                        <option value="projet">Projet</option>
-                                        <option value="reussite">Réussite</option>
-                                        <option value="autre">Autre</option>
+                                        <!-- Les catégories sont chargées dynamiquement depuis la base de données -->
                                     </select>
                                 </div>
                             </div>
@@ -275,9 +284,8 @@
         </main>
     </div>
 
-    <!-- Toast Notification -->
     <div id="toast" class="toast"></div>
 
-    <script src="admin.js"></script>
+    <script src="assets/admin.js"></script>
 </body>
 </html>

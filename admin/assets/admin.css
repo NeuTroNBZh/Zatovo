@@ -1,11 +1,8 @@
-/* ===== ADMIN STYLES ===== */
-
 .admin-body {
     background: #f5f7fa;
     min-height: 100vh;
 }
 
-/* Login Page */
 .login-container {
     display: flex;
     align-items: center;
@@ -29,16 +26,10 @@
     margin-bottom: 40px;
 }
 
-.login-logo {
-    height: 144px;
+.login-header .admin-logo {
+    height: 80px;
     width: auto;
-    object-fit: contain;
-    margin-bottom: 12px;
-}
-
-.login-header h1,
-.login-header p {
-    display: none;
+    margin-bottom: 15px;
 }
 
 .login-header h1 {
@@ -127,13 +118,12 @@
     color: #e74c3c;
 }
 
-/* Admin Dashboard */
+
 .admin-container {
     display: flex;
     min-height: 100vh;
 }
 
-/* Sidebar */
 .admin-sidebar {
     width: 280px;
     background: #2c3e50;
@@ -150,19 +140,28 @@
 .sidebar-header {
     padding: 30px 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    text-align: center;
+    background: white;
+    border-radius: 10px;
+    margin: 10px;
 }
 
-.sidebar-logo {
-    height: 88px;
+.sidebar-header .admin-logo {
+    height: 70px;
     width: auto;
-    object-fit: contain;
-    flex-shrink: 0;
+    margin-bottom: 10px;
 }
 
-.sidebar-title { display: none; }
+.sidebar-header h2 {
+    font-size: 28px;
+    margin-bottom: 5px;
+    color: #e74c3c;
+}
+
+.sidebar-header p {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+}
 
 .sidebar-nav {
     flex: 1;
@@ -203,7 +202,8 @@
 
 .btn-logout {
     width: 100%;
-    height: 59px;
+    display: flex;
+    align-items: center;
     justify-content: center;
     gap: 10px;
     padding: 12px;
@@ -224,7 +224,7 @@
     height: 18px;
 }
 
-/* Main Content */
+
 .admin-main {
     flex: 1;
     margin-left: 280px;
@@ -237,7 +237,7 @@
     padding: 25px 40px;
     display: flex;
     justify-content: space-between;
-    height: 96px;
+    align-items: center;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
@@ -276,7 +276,7 @@
     margin-bottom: 30px;
 }
 
-/* Table */
+
 .table-container {
     background: white;
     border-radius: 15px;
@@ -316,6 +316,72 @@
     height: 60px;
     object-fit: cover;
     border-radius: 8px;
+}
+
+.badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #e9ecef;
+    color: #495057;
+    display: inline-block;
+}
+
+/* Gallery Grid in Admin */
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+    margin-top: 20px;
+}
+
+.gallery-item-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.gallery-item-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+}
+
+.gallery-item-card img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    display: block;
+}
+
+.gallery-info {
+    padding: 20px;
+    position: relative;
+}
+
+.gallery-info h4 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.gallery-info p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+    line-height: 1.5;
+    max-height: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gallery-info .btn-delete {
+    position: absolute;
+    top: 15px;
+    right: 15px;
 }
 
 .table-actions {
@@ -365,7 +431,7 @@
     padding: 60px !important;
 }
 
-/* Form */
+
 .form-container {
     background: white;
     padding: 40px;
@@ -423,7 +489,7 @@
     font-size: 13px;
 }
 
-/* File Upload */
+
 .file-upload {
     position: relative;
 }
@@ -475,11 +541,13 @@
 .image-preview img {
     max-width: 100%;
     max-height: 300px;
+    width: auto;
+    height: auto;
     border-radius: 8px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    object-fit: contain;
 }
 
-/* Form Actions */
 .form-actions {
     display: flex;
     gap: 15px;
@@ -508,7 +576,7 @@
     height: 20px;
 }
 
-/* Toast Notification */
+
 .toast {
     position: fixed;
     bottom: -100px;
@@ -534,7 +602,7 @@
     background: #e74c3c;
 }
 
-/* Spinner */
+
 .spinner {
     width: 40px;
     height: 40px;
@@ -587,6 +655,10 @@
         overflow-x: auto;
     }
 
+    
+    .gallery-grid {
+        grid-template-columns: 1fr;
+    }
     .admin-table {
         min-width: 800px;
     }

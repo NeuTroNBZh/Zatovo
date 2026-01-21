@@ -1,0 +1,14 @@
+# Empêcher l'exécution de scripts PHP dans le répertoire uploads
+Options -Indexes
+php_flag engine off
+
+<FilesMatch "\.(php|phtml|php3|php4|php5|phps|pht|phar)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Autoriser seulement les fichiers images
+<FilesMatch "\.(jpg|jpeg|png|gif|webp|svg)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>

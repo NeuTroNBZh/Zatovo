@@ -3,22 +3,47 @@ const menuToggle = document.querySelector('.menu-toggle');
 const navMenu = document.querySelector('.nav-menu');
 
 menuToggle.addEventListener('click', () => {
-    const isOpen = navMenu.classList.toggle('active');
-    menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    navMenu.classList.toggle('active');
     
     // Animate hamburger icon
     const spans = menuToggle.querySelectorAll('span');
-    spans[0].style.transform = isOpen 
+    spans[0].style.transform = navMenu.classList.contains('active') 
         ? 'rotate(45deg) translate(5px, 5px)' 
         : 'none';
-    spans[1].style.opacity = isOpen ? '0' : '1';
-    spans[2].style.transform = isOpen 
+    spans[1].style.opacity = navMenu.classList.contains('active') ? '0' : '1';
+    spans[2].style.transform = navMenu.classList.contains('active') 
         ? 'rotate(-45deg) translate(7px, -6px)' 
         : 'none';
 });
 
-// Close menu when clicking on a link
-document.querySelectorAll('.nav-link').forEach(link => {
+// Mobile Dropdown Toggle
+document.querySelectorAll('.has-dropdown > .nav-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+        // Only handle dropdown on mobile
+        if (window.innerWidth <= 768) {
+            e.preventDefault();
+            const parent = link.parentElement;
+            parent.classList.toggle('mobile-open');
+        }
+    });
+});
+
+// Close menu when clicking on a dropdown link
+document.querySelectorAll('.dropdown-link').forEach(link => {
+    link.addEventListener('click', () => {
+        navMenu.classList.remove('active');
+        document.querySelectorAll('.has-dropdown').forEach(item => {
+            item.classList.remove('mobile-open');
+        });
+        const spans = menuToggle.querySelectorAll('span');
+        spans[0].style.transform = 'none';
+        spans[1].style.opacity = '1';
+        spans[2].style.transform = 'none';
+    });
+});
+
+// Close menu when clicking on a direct nav link
+document.querySelectorAll('.nav-menu > li > .nav-link:not(.has-dropdown .nav-link)').forEach(link => {
     link.addEventListener('click', () => {
         navMenu.classList.remove('active');
         const spans = menuToggle.querySelectorAll('span');
