@@ -64,7 +64,14 @@ function sanitizeInput($data) {
  * Valider une URL
  */
 function isValidUrl($url) {
-    return filter_var($url, FILTER_VALIDATE_URL) !== false;
+    if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+        return false;
+    }
+    // FILTER_VALIDATE_URL accepte "javascript://..." (schema suivi de //) -
+    // on restreint explicitement aux schemas http/https pour eviter l'injection
+    // de liens executant du JS (ex: dans un attribut href)
+    $scheme = parse_url($url, PHP_URL_SCHEME);
+    return in_array(strtolower((string) $scheme), ['http', 'https'], true);
 }
 
 /**

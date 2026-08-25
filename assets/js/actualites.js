@@ -1,5 +1,13 @@
 // Configuration
 const API_URL = 'api/actualites.php';
+
+// Echappe le HTML avant insertion dans innerHTML (le champ "texte" n'est pas
+// echappe cote serveur pour conserver les sauts de ligne)
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text ?? '';
+    return div.innerHTML;
+}
 let currentPage = 1;
 let currentFilter = 'all';
 const articlesPerPage = 6;
@@ -110,7 +118,7 @@ function displayActualites(articles) {
                     </span>
                 </div>
                 <h3 class="article-title">${article.titre}</h3>
-                <p class="article-excerpt">${truncateText(article.texte, 150)}</p>
+                <p class="article-excerpt">${escapeHtml(truncateText(article.texte, 150))}</p>
                 <div class="article-footer">
                     <button class="btn-read-more" onclick="openArticleModal(${article.id})">
                         Lire la suite
@@ -245,7 +253,7 @@ async function openArticleModal(articleId) {
                         </div>
                     </div>
                     <div class="modal-text">
-                        ${article.texte.replace(/\n/g, '<br>')}
+                        ${escapeHtml(article.texte).replace(/\n/g, '<br>')}
                     </div>
                     ${article.lien ? `
                         <div class="modal-link">

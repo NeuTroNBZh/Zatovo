@@ -9,17 +9,23 @@
 # Désactiver l'indexation des répertoires
 Options -Indexes
 
-# Protection des fichiers de configuration
-<FilesMatch "^(\.env|\.git|\.htaccess|\.htpasswd|config\.php|db\.php)">
+# Protection des fichiers de configuration et fichiers caches
+<FilesMatch "^(\.env|\.git.*|\.htaccess|\.htpasswd|\.user\.ini|config\.php|db\.php)">
     Order allow,deny
     Deny from all
 </FilesMatch>
 
-# Interdire l'accès direct aux fichiers PHP sensibles
-<FilesMatch "^(security\.php)$">
+# Interdire l'accès direct aux fichiers PHP sensibles et outils de dev/admin BDD
+# (adminer.php, setup/ et test-upload.php ne doivent jamais être accessibles
+# sur un site en production)
+<FilesMatch "^(security\.php|adminer\.php|test-upload\.php)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
+
+<IfModule mod_alias.c>
+    RedirectMatch 403 ^/setup/
+</IfModule>
 
 # Limiter la taille des uploads
 php_value upload_max_filesize 5M
@@ -30,15 +36,10 @@ php_value session.cookie_httponly 1
 php_value session.use_only_cookies 1
 php_value session.cookie_samesite Lax
 
-# Désactiver l'exécution de PHP dans le répertoire uploads
-<Directory "uploads">
-    php_flag engine off
-    Options -Indexes
-    <FilesMatch "\.(php|phtml|php3|php4|php5|phps)$">
-        Order Deny,Allow
-        Deny from all
-    </FilesMatch>
-</Directory>
+# Note : l'exécution de PHP dans uploads/ est déjà désactivée par
+# uploads/.htaccess (un bloc <Directory> ici serait invalide en dehors d'un
+# contexte de configuration serveur — provoque une erreur 500 sous Apache
+# strict, silencieusement ignoré sous LiteSpeed)
 
 # Protection contre les hotlinks d'images (optionnel)
 # <IfModule mod_rewrite.c>

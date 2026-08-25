@@ -115,9 +115,10 @@ try {
         ]);
     }
 } catch (PDOException $e) {
+    error_log('Erreur base de donnees (auth) : ' . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Erreur base de données : ' . $e->getMessage()
+        'message' => 'Erreur serveur, veuillez reessayer'
     ]);
 }
 ?>

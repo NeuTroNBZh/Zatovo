@@ -48,8 +48,10 @@ CREATE TABLE `admin_users` (
   KEY `idx_username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Compte de placeholder (mot de passe aleatoire, inconnu de tous) — utilisez
+-- setup/create_admin.php pour creer votre vrai compte administrateur.
 INSERT INTO `admin_users` (`id`, `username`, `password`, `email`, `created_at`) VALUES
-(1,	'admin',	'REDACTED_HASH',	'admin@example.com',	'2026-01-20 13:53:11');
+(1,	'admin',	'$2y$12$Pn5gNzmT053w6bPmjeHh/udb2cYaXIUGXInj6c8Uz9xwoM/8TYpdq',	'admin@example.com',	'2026-01-20 13:53:11');
 
 DROP TABLE IF EXISTS `categories`;
 CREATE TABLE `categories` (
